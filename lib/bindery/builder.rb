@@ -22,11 +22,12 @@ module Bindery
         return false
       end
 
+      meta = @book.metadata
       ensure_pandoc!
 
       Dir.mktmpdir("bindery-#{@book.id}-") do |tmp|
         merged = merge_chapters(chapters, tmp)
-        meta_file = write_pandoc_metadata(tmp)
+        meta_file = write_pandoc_metadata(tmp, meta)
 
         out_dir = Project.output_dir(@project_root) + "epub"
         FileUtils.mkdir_p(out_dir)
@@ -43,7 +44,7 @@ module Bindery
 
         run(cmd)
       end
-    rescue BuildError => e
+    rescue Bindery::Error => e
       @last_error = e.message
       false
     end
@@ -71,8 +72,7 @@ module Bindery
       path
     end
 
-    def write_pandoc_metadata(tmp_dir)
-      meta = @book.metadata
+    def write_pandoc_metadata(tmp_dir, meta)
       pandoc_meta = {
         "title"     => meta["title"] || @book.id,
         "author"    => meta["author"] || "佚名",

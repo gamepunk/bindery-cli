@@ -37,10 +37,14 @@ module Bindery
 
     def title
       metadata["title"] || id
+    rescue Bindery::Error
+      id
     end
 
     def author
       metadata["author"] || "佚名"
+    rescue Bindery::Error
+      "佚名"
     end
 
     def cover_path
