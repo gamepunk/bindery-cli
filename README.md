@@ -11,7 +11,7 @@
 ## 安装
 
 ```bash
-gem install bindery
+gem install bindery-cli
 ```
 
 系统需要另外安装 Pandoc：

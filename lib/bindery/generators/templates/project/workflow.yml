@@ -3,8 +3,8 @@ name: Build books
 on:
   push:
     paths:
-      - 'books/**/*.md'
-      - 'books/**/metadata.yaml'
+      - "books/**/*.md"
+      - "books/**/metadata.yaml"
   workflow_dispatch: {}
 
 jobs:
@@ -19,10 +19,10 @@ jobs:
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
+          ruby-version: "3.2"
 
       - name: Install bindery
-        run: gem install bindery
+        run: gem install bindery-cli
 
       - name: Build all books
         run: bindery build --all

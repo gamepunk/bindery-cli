@@ -1,7 +1,7 @@
 require_relative "lib/bindery/version"
 
 Gem::Specification.new do |spec|
-  spec.name          = "bindery"
+  spec.name          = "bindery-cli"
   spec.version       = Bindery::VERSION
   spec.authors        = ["Billow Wang"]
   spec.summary       = "把 Markdown 公版书批量构建为 EPUB 的项目脚手架工具"
@@ -13,10 +13,10 @@ Gem::Specification.new do |spec|
     仅依赖 Ruby 标准库，不引入任何第三方 gem。
   DESC
   spec.license       = "MIT"
-  spec.homepage      = "https://github.com/gamepunk/bindery-gem"
+  spec.homepage      = "https://github.com/gamepunk/bindery-cli"
   spec.metadata      = {
-    "homepage_uri"    => spec.homepage,
-    "source_code_uri" => spec.homepage,
+    "source_code_uri"      => spec.homepage,
+    "rubygems_mfa_required" => "true",
   }
   spec.required_ruby_version = ">= 3.0"
 
