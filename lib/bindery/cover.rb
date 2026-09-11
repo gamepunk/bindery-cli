@@ -5,7 +5,7 @@ module Bindery
   # 纯 Ruby 生成装饰性封面 PNG：配色由书名稳定派生，不含文字（文字渲染需要字体光栅化，超出标准库能力）
   module Cover
     WIDTH  = 600
-    HEIGHT = 800
+    HEIGHT = 960
 
     module_function
 

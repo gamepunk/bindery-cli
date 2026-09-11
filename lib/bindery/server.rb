@@ -2,6 +2,8 @@ require "socket"
 require "uri"
 require "json"
 require "yaml"
+require "base64"
+require "pathname"
 
 module Bindery
   # 极简静态服务器：展示书库并提供 EPUB 下载。
@@ -17,6 +19,9 @@ module Bindery
       ".png"  => "image/png",
       ".svg"  => "image/svg+xml",
     }.freeze
+
+    # 封面编辑器页面（随 gem 一起打包）
+    ASSETS_DIR = Pathname.new(__dir__) + "assets"
 
     def initialize(project_root, host: "127.0.0.1", port: 8000)
       @project_root = project_root
@@ -58,15 +63,24 @@ module Bindery
       return unless request_line
 
       method, raw_path, = request_line.split(" ")
-      # 丢弃其余请求头
+      # 读取请求头，POST 需要 Content-Length
+      content_length = 0
       while (line = client.gets)
         break if line.nil? || line == "\r\n" || line == "\n"
+        if line =~ /\AContent-Length:\s*(\d+)/i
+          content_length = Regexp.last_match(1).to_i
+        end
       end
-      return unless method == "GET" || method == "HEAD"
 
       path = (URI::DEFAULT_PARSER.unescape(raw_path.split("?").first) rescue raw_path)
       path = "/" if path.nil? || path.empty?
       path = path.gsub("..", "") # 防目录穿越
+
+      if method == "POST" && path == "/cover/save"
+        save_cover(client, content_length)
+        return
+      end
+      return unless method == "GET" || method == "HEAD"
 
       case path
       when "/", "/index.html"
@@ -74,6 +88,8 @@ module Bindery
         send_response(client, 200, MIME[".html"], body, method)
       when "/books.json"
         serve_file(client, Project.index_file(@project_root), MIME[".json"], method)
+      when "/cover"
+        serve_file(client, ASSETS_DIR + "index.html", MIME[".html"], method)
       when %r{\A/epub/([\w\-.]+\.epub)\z}
         serve_file(client, Project.output_dir(@project_root) + "epub" + Regexp.last_match(1), MIME[".epub"], method)
       when %r{\A/cover/([\w\-]+)\z}
@@ -117,7 +133,7 @@ module Bindery
             h1 { font-size: 1.6em; border-bottom: 1px solid #eee; padding-bottom: .4em; }
             ul { list-style: none; padding: 0; }
             .book { display: flex; gap: 1em; padding: 1em 0; border-bottom: 1px solid #f0f0f0; }
-            .cover { width: 64px; height: 96px; object-fit: cover; background: #f5f5f5; border-radius: 4px; }
+            .cover { width: 64px; height: 102px; object-fit: cover; background: #f5f5f5; border-radius: 4px; }
             .info h2 { margin: 0; font-size: 1.1em; }
             .author { color: #666; margin: .3em 0 .5em; }
             a { color: #b45309; }
@@ -153,6 +169,43 @@ module Bindery
       path = (book_dir + "cover.png") unless path.file?
 
       serve_file(client, path, nil, method)
+    end
+
+    # 保存封面编辑器生成的 PNG 到书籍目录，并更新 metadata 的 cover 字段
+    def save_cover(client, content_length)
+      body = client.read(content_length).to_s
+      return send_json(client, 400, { ok: false, error: "请求体为空" }) if body.empty?
+
+      data = JSON.parse(body)
+      book_id = data["book"].to_s
+      data_url = data["data"].to_s
+
+      book_dir = Project.books_dir(@project_root) + book_id
+      return send_json(client, 404, { ok: false, error: "书籍不存在: #{book_id}" }) unless book_dir.directory?
+
+      b64 = data_url.sub(/\Adata:image\/\w+;base64,/, "")
+      png = Base64.decode64(b64)
+      path = book_dir + "cover.png"
+      path.binwrite(png)
+
+      meta_file = book_dir + "metadata.yaml"
+      if meta_file.file?
+        text = meta_file.read
+        text = if text =~ /^cover:.*$/
+                 text.sub(/^cover:.*$/, "cover: cover.png")
+               else
+                 text.chomp + "\ncover: cover.png\n"
+               end
+        meta_file.write(text)
+      end
+
+      send_json(client, 200, { ok: true, path: "books/#{book_id}/cover.png" })
+    rescue JSON::ParserError => e
+      send_json(client, 400, { ok: false, error: "JSON 解析失败: #{e.message}" })
+    end
+
+    def send_json(client, status, hash)
+      send_response(client, status, MIME[".json"], JSON.generate(hash), "POST")
     end
 
     def serve_file(client, path, content_type, method)

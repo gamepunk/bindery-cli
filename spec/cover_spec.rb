@@ -21,7 +21,7 @@ class CoverSpec < Minitest::Test
       path = Bindery::Cover.generate(book)
 
       assert File.file?(path)
-      assert_equal [600, 800], Bindery::Image.dimensions(path)
+      assert_equal [600, 960], Bindery::Image.dimensions(path)
       assert_match(/cover: cover\.png/, (dir + "metadata.yaml").read)
     end
   end

@@ -37,8 +37,8 @@ module Bindery
         dims = Bindery::Image.dimensions(cover)
         if dims.nil?
           warns << "封面不是有效的 JPEG/PNG 图片"
-        elsif dims[0] < 600 || dims[1] < 800
-          warns << "封面尺寸偏小（#{dims[0]}×#{dims[1]}，建议至少 600×800）"
+        elsif dims[0] < 600 || dims[1] < 960
+          warns << "封面尺寸偏小（#{dims[0]}×#{dims[1]}，建议至少 600×960，比例 1:1.6）"
         end
       end
 

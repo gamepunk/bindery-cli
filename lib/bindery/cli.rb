@@ -1,5 +1,6 @@
 require "optparse"
 require "fileutils"
+require "rbconfig"
 
 module Bindery
   # 命令行入口：解析子命令并分发
@@ -30,6 +31,8 @@ module Bindery
         cmd_watch(rest)
       when "serve"
         cmd_serve(rest)
+      when "web"
+        cmd_web(rest)
       when "status"
         cmd_status(rest)
       when "version", "-v", "--version"
@@ -360,6 +363,46 @@ module Bindery
       Bindery::Server.new(project_root, host: options[:host], port: options[:port]).start
     end
 
+    # ---------- bindery web [--port N] [--host H] ----------
+    def cmd_web(args)
+      options = { port: 8000, host: "127.0.0.1" }
+      parser = OptionParser.new do |o|
+        o.on("--port N", Integer) { |v| options[:port] = v }
+        o.on("--host H") { |v| options[:host] = v }
+      end
+      parser.parse(args)
+
+      project_root = Project.root!
+      Index.rebuild(project_root)
+
+      url = "http://#{options[:host]}:#{options[:port]}/cover"
+      server = Bindery::Server.new(project_root, host: options[:host], port: options[:port])
+      thread = Thread.new do
+        begin
+          server.start
+        rescue StandardError => e
+          warn "服务启动失败: #{e.message}"
+        end
+      end
+      sleep 0.5 # 等服务就绪
+      open_browser(url)
+      puts "封面生成器已打开: #{url}（Ctrl-C 退出）"
+      thread.join
+    rescue Interrupt
+      puts "\n已退出"
+    end
+
+    def open_browser(url)
+      case RbConfig::CONFIG["host_os"]
+      when /darwin/
+        system("open", url)
+      when /mswin|mingw|cygwin/
+        system("cmd", "/c", "start", "", url)
+      else
+        system("xdg-open", url)
+      end
+    end
+
     # ---------- bindery status ----------
     def cmd_status(_args)
       project_root = Project.root!
@@ -409,6 +452,7 @@ module Bindery
           bindery clean [--all]                             清理构建产物（--all 连 books.json 一起删）
           bindery watch [--interval 秒]                      监听 books/ 自动重建
           bindery serve [--port N] [--host H]                启动本地书库站点
+          bindery web [--port N]                             打开 Web 封面生成器
           bindery status                                     查看所有书籍状态
           bindery version                                    查看版本号
       HELP

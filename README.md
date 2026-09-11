@@ -6,6 +6,7 @@
 - `bindery new book <书名>` 新建一本书（ID 自动生成）
 - `bindery build` 调用 [Pandoc](https://pandoc.org) 批量构建 EPUB
 - `bindery validate` / `clean` / `watch` / `serve` / `status` 管理书籍与产物
+- `bindery web` 打开 Web 封面生成器（自动填充书籍信息）
 
 仅依赖 Ruby 标准库，不引入任何第三方 gem。
 
@@ -67,6 +68,9 @@ bindery watch
 
 # 本地启动书库站点
 bindery serve
+
+# 打开 Web 封面生成器（自动填充书籍信息）
+bindery web
 
 # 清理构建产物
 bindery clean --all
