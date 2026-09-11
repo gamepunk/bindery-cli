@@ -5,10 +5,19 @@
 ## 常用命令
 
 ```bash
-# 新建一本书
-bindery generate book <书籍ID> "<书名>" --author "<作者>"
-# 简写
-bindery g book <书籍ID> "<书名>"
+# 新建一本书（ID 自动生成，可用 --id 指定；可带译者 / ISBN；--cover 自动生成封面）
+bindery new book "<书名>" --author "<作者>" --translator "<译者>" --isbn "<ISBN>" --cover
+# 一步到位建好章节（N = 正文章节数，封面/目录由构建自动生成）
+bindery new book "<书名>" chapter 20 --author "<作者>"
+
+# 卷式结构：每个卷在 EPUB 中独立成页（h2=卷名，h3=章名）
+bindery new volume <书籍ID> "<卷名>" --chapters <数量>
+
+# 单独批量创建章节（编号自动接续已有章节）
+bindery new chapter <书籍ID> <数量>
+
+# 单独生成封面
+bindery cover <书籍ID>
 
 # 构建一本书
 bindery build <书籍ID>
@@ -16,8 +25,24 @@ bindery build <书籍ID>
 # 批量构建全部
 bindery build --all
 
+# 构建前校验（不实际构建）
+bindery validate <书籍ID>
+bindery build <书籍ID> --check
+
+# 构建后用 epubcheck 校验
+bindery build <书籍ID> --epubcheck
+
 # 查看所有书籍状态
 bindery status
+
+# 监听书籍目录，改动自动重建
+bindery watch
+
+# 本地启动书库站点
+bindery serve
+
+# 清理构建产物
+bindery clean --all
 ```
 
 ## 目录结构

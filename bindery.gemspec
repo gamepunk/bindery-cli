@@ -6,9 +6,9 @@ Gem::Specification.new do |spec|
   spec.authors        = ["Billow Wang"]
   spec.summary       = "把 Markdown 公版书批量构建为 EPUB 的项目脚手架工具"
   spec.description   = <<~DESC
-    bindery 是手架工具：
-    `bindery new` 创建整套项目结构，
-    `bindery generate book` 为单本书生成骨架，
+    bindery 是脚手架工具：
+    `bindery init` 在当前目录初始化项目，
+    `bindery new book` 为单本书生成骨架（ID 自动生成），
     `bindery build` 调用 Pandoc 批量构建 EPUB。
     仅依赖 Ruby 标准库，不引入任何第三方 gem。
   DESC

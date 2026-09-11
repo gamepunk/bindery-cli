@@ -1,4 +1,5 @@
 require "pathname"
+require "yaml"
 
 module Bindery
   # 负责在目录树中定位 bindery 项目根目录（含 config/bindery.yml 标记文件的目录）
@@ -21,7 +22,7 @@ module Bindery
       root(start_dir) || raise(
         Bindery::ProjectNotFoundError,
         "找不到 bindery 项目（未发现 #{MARKER}）。请在项目目录内执行，" \
-        "或先用 `bindery new <项目名>` 创建一个新项目。"
+        "或先用 `bindery init` 初始化一个项目。"
       )
     end
 
@@ -39,6 +40,15 @@ module Bindery
 
     def index_file(project_root = root!)
       project_root + "books.json"
+    end
+
+    # 读取项目配置 config/bindery.yml（即项目标记文件本身），返回 Hash
+    # 文件缺失或解析失败时返回空 Hash，由调用方提供默认值
+    def config(project_root = root!)
+      path = project_root + MARKER
+      return {} unless path.file?
+
+      YAML.safe_load(path.read, permitted_classes: [Symbol]) || {}
     end
   end
 end
