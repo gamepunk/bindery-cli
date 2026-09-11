@@ -1,0 +1,46 @@
+# <%= project_name %>
+
+用 bindery 管理的公版经典书籍项目。Markdown 源文件 -> EPUB。
+
+## 常用命令
+
+```bash
+# 新建一本书
+bindery generate book <书籍ID> "<书名>" --author "<作者>"
+# 简写
+bindery g book <书籍ID> "<书名>"
+
+# 构建一本书
+bindery build <书籍ID>
+
+# 批量构建全部
+bindery build --all
+
+# 查看所有书籍状态
+bindery status
+```
+
+## 目录结构
+
+```
+<%= project_name %>/
+├── config/bindery.yml     # 项目标记文件，不要删除
+├── books/               # 每本书一个子目录
+├── templates/           # 全项目共用的 EPUB 样式
+├── output/epub/         # 构建产物
+└── books.json           # 自动生成的书目索引
+```
+
+## 环境依赖
+
+只需要系统装有 `pandoc`：
+
+```bash
+# Debian/Ubuntu
+apt-get install -y pandoc
+
+# macOS
+brew install pandoc
+```
+
+bindery 本身不依赖任何第三方 gem，只用 Ruby 标准库。

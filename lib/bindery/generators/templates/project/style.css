@@ -1,0 +1,30 @@
+body {
+  font-family: "Noto Serif CJK SC", "Songti SC", serif;
+  line-height: 1.8;
+  margin: 1em;
+}
+
+h1 {
+  font-size: 1.6em;
+  text-align: center;
+  margin-top: 2em;
+  margin-bottom: 1em;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 0.3em;
+}
+
+h2 {
+  font-size: 1.3em;
+  margin-top: 1.5em;
+}
+
+p {
+  text-indent: 2em;
+  margin: 0.5em 0;
+}
+
+blockquote {
+  margin: 1em 2em;
+  color: #444;
+  font-style: italic;
+}
