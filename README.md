@@ -6,7 +6,7 @@
 - `bindery new book <书名>` 新建一本书（ID 自动生成）
 - `bindery build` 调用 [Pandoc](https://pandoc.org) 批量构建 EPUB
 - `bindery validate` / `clean` / `watch` / `serve` / `status` 管理书籍与产物
-- `bindery web` 打开 Web 封面生成器（自动填充书籍信息）
+- `bindery cover` 打开 Web 封面生成器（自动填充书籍信息）
 
 仅依赖 Ruby 标准库，不引入任何第三方 gem。
 
@@ -48,7 +48,6 @@ bindery new volume <id> "为政" --chapters 5
 # 5. 编辑 books/<id>/chapters/ 下的章节文件
 #    （可选）单独批量创建章节：bindery new chapter <id> 10
 #    （可选）按标题自动重命名章节：bindery rename chapters <id>
-#    （可选）单独生成封面：bindery cover <id>
 
 # 6. 构建 EPUB
 bindery build --all
@@ -70,7 +69,7 @@ bindery watch
 bindery serve
 
 # 打开 Web 封面生成器（自动填充书籍信息）
-bindery web
+bindery cover
 
 # 清理构建产物
 bindery clean --all
@@ -84,7 +83,7 @@ my-books/
 ├── books/                 # 每本书一个子目录（ID 即目录名）
 │   └── <id>/
 │       ├── metadata.yaml  # 书籍元信息
-│       ├── cover.png      # 封面（可选，bindery cover 自动生成）
+│       ├── cover.png      # 封面（可选，new book --cover 或 bindery cover 网页生成器生成）
 │       └── chapters/      # 平铺 Markdown，卷结构由标题层级定义（## 卷名 / ### 章名）
 │           ├── 01-chapter.md
 │           ├── 卷01-学而.md

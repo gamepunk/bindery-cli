@@ -1,0 +1,892 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bindery 封面生成器</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      :root {
+        --paper: #ffffff;
+        --panel: #ffffff;
+        --ink: #262220;
+        --ink-soft: #7a7266;
+        --rule: #d8d1bd;
+        --seal: #a23b2e;
+        --seal-dark: #7e2c22;
+        --seal-tint: rgba(162, 59, 46, 0.14);
+      }
+
+      html,
+      body {
+        height: 100%;
+      }
+
+      body {
+        font-family: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--paper);
+        color: var(--ink);
+      }
+
+      ::selection {
+        background: var(--seal-tint);
+      }
+
+      :focus-visible {
+        outline: 2px solid var(--seal);
+        outline-offset: 2px;
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 28px;
+        border-bottom: 1px solid var(--rule);
+        flex: none;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        font-family: "Songti SC", "STSong", serif;
+        letter-spacing: 0.02em;
+      }
+
+      .nav a {
+        display: inline-block;
+        padding: 8px 16px;
+        border-radius: 3px;
+        background: var(--seal);
+        color: #fff;
+        text-decoration: none;
+        font-size: 13.5px;
+        font-weight: 600;
+      }
+
+      .nav a:hover {
+        background: var(--seal-dark);
+      }
+
+      .layout {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        gap: 32px;
+        padding: 24px 28px;
+        max-width: 1100px;
+        width: 100%;
+        margin: 0 auto;
+        align-items: stretch;
+      }
+
+      .panel {
+        background: transparent;
+        padding: 0;
+      }
+
+      .controls {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow-y: auto;
+        padding-right: 28px;
+      }
+
+      .preview {
+        flex: 1 1 0;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+      }
+
+      .section {
+        margin-bottom: 16px;
+      }
+
+      .section:last-of-type {
+        margin-bottom: 0;
+      }
+
+      .row {
+        display: flex;
+        gap: 16px;
+      }
+
+      .row + .row {
+        margin-top: 16px;
+      }
+
+      .row > .field {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .row > .field-options {
+        flex: 0 0 110px;
+        min-width: 0;
+      }
+
+      label {
+        display: block;
+        font-size: 12.5px;
+        color: var(--ink-soft);
+        margin: 16px 0 6px;
+      }
+
+      label:first-child {
+        margin-top: 0;
+      }
+
+      input[type="text"],
+      select {
+        width: 100%;
+        padding: 7px 2px 8px;
+        border: none;
+        border-bottom: 1px solid var(--rule);
+        border-radius: 0;
+        font-size: 14px;
+        background: transparent;
+        color: var(--ink);
+        font-family: inherit;
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
+      }
+
+      input[type="text"]::placeholder {
+        color: #b7ae9c;
+      }
+
+      select {
+        appearance: none;
+        -webkit-appearance: none;
+        background-image:
+          linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+          linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+        background-position:
+          calc(100% - 6px) center,
+          calc(100% - 1px) center;
+        background-size:
+          6px 6px,
+          6px 6px;
+        background-repeat: no-repeat;
+        padding-right: 18px;
+        cursor: pointer;
+      }
+
+      input[type="text"]:focus,
+      select:focus {
+        outline: none;
+        border-bottom: 1px solid var(--accent, var(--seal));
+        box-shadow: 0 1px 0 0 var(--accent, var(--seal));
+      }
+
+      .swatches {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        padding: 6px;
+      }
+
+      .swatch {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid transparent;
+        position: relative;
+        transition:
+          box-shadow 0.15s,
+          transform 0.1s;
+      }
+
+      .swatch:hover {
+        transform: translateY(-1px);
+      }
+
+      .swatch.active {
+        box-shadow:
+          0 0 0 2px var(--panel),
+          0 0 0 4px var(--ink);
+      }
+
+      .swatch.active::after {
+        content: none;
+      }
+
+      .swatch.custom {
+        border: none;
+        margin: 0;
+      }
+
+      .swatch.custom::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: conic-gradient(#f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00);
+      }
+
+      .swatch.custom.active {
+        box-shadow:
+          0 0 0 2px var(--panel),
+          0 0 0 4px var(--ink);
+      }
+
+      .swatch.custom input[type="color"] {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+        border: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      canvas {
+        max-width: 100%;
+        max-height: calc(100% - 90px);
+        width: auto;
+        height: auto;
+        display: block;
+        border-radius: 3px;
+        border: 1px solid var(--rule);
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+      }
+
+      .actions button {
+        flex: 1;
+      }
+
+      button {
+        padding: 10px 18px;
+        border: none;
+        border-radius: 3px;
+        font-size: 13.5px;
+        cursor: pointer;
+        font-weight: 600;
+        font-family: inherit;
+        transition:
+          transform 0.08s,
+          background 0.15s,
+          opacity 0.15s;
+      }
+
+      .primary {
+        background: var(--accent, var(--seal));
+        color: #fff;
+      }
+
+      .primary:hover {
+        filter: brightness(0.85);
+      }
+
+      .primary:active {
+        transform: translateY(1px);
+      }
+
+      .secondary {
+        background: transparent;
+        color: var(--ink);
+        border: 1px solid var(--rule);
+      }
+
+      .secondary:hover {
+        border-color: var(--ink-soft);
+      }
+
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      #status {
+        font-size: 12.5px;
+        color: var(--ink-soft);
+        min-height: 18px;
+      }
+
+      @media (max-width: 860px) {
+        .layout {
+          flex-direction: column;
+          overflow-y: auto;
+          padding: 20px;
+        }
+
+        .controls {
+          flex: none;
+          width: 100%;
+          border-right: none;
+          border-bottom: 1px solid var(--rule);
+          padding-right: 0;
+          padding-bottom: 24px;
+          overflow-y: visible;
+        }
+
+        .preview {
+          padding: 24px 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 data-i18n="pageTitle">封面生成器</h1>
+      <div class="nav">
+        <a href="/" data-i18n="library">书库</a>
+      </div>
+    </header>
+    <div class="layout">
+      <div class="panel controls">
+        <div class="section">
+          <label for="book" data-i18n="selectBook">选择书籍</label>
+          <select id="book">
+            <option value="" data-i18n="noBook">（无书籍）</option>
+          </select>
+        </div>
+
+        <div class="section">
+          <div class="row">
+            <div class="field">
+              <label for="title" data-i18n="title">书名</label>
+              <input
+                type="text"
+                id="title"
+                placeholder="书名"
+                data-i18n-placeholder="title"
+              />
+            </div>
+            <div class="field-options">
+              <label for="titleAlign" data-i18n="titleAlign">书名对齐</label>
+              <select id="titleAlign">
+                <option value="center" data-i18n="alignCenter">居中</option>
+                <option value="left" data-i18n="alignLeft">左对齐</option>
+                <option value="right" data-i18n="alignRight">右对齐</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label for="subtitle" data-i18n="subtitle">副标题</label>
+              <input
+                type="text"
+                id="subtitle"
+                placeholder="副标题"
+                data-i18n-placeholder="subtitle"
+              />
+            </div>
+            <div class="field-options">
+              <label for="placement" data-i18n="subtitlePlacement"
+                >副标题位置</label
+              >
+              <select id="placement">
+                <option value="bottom_right" data-i18n="bottomRight">
+                  下方 · 右
+                </option>
+                <option value="bottom_left" data-i18n="bottomLeft">
+                  下方 · 左
+                </option>
+                <option value="top_right" data-i18n="topRight">
+                  上方 · 右
+                </option>
+                <option value="top_left" data-i18n="topLeft">上方 · 左</option>
+              </select>
+            </div>
+          </div>
+          <label for="topText" data-i18n="topText">顶部文字</label>
+          <input
+            type="text"
+            id="topText"
+            placeholder="一句话介绍这本书"
+            data-i18n-placeholder="topTextPlaceholder"
+          />
+          <label for="author" data-i18n="author">作者</label>
+          <input
+            type="text"
+            id="author"
+            placeholder="作者"
+            data-i18n-placeholder="author"
+          />
+        </div>
+
+        <div class="section">
+          <label for="font" data-i18n="font">字体</label>
+          <select id="font"></select>
+          <label for="logo" data-i18n="logo">LOGO</label>
+          <input type="text" id="logo" value="再读经典" />
+          <label data-i18n="colors">配色</label>
+          <div class="swatches" id="colors"></div>
+        </div>
+      </div>
+
+      <div class="panel preview">
+        <canvas id="cover" width="1000" height="1600"></canvas>
+        <div class="actions">
+          <button
+            class="primary"
+            id="saveBtn"
+            onclick="saveToBook()"
+            data-i18n="save"
+          >
+            保存到书籍
+          </button>
+          <button
+            class="secondary"
+            onclick="downloadPng()"
+            data-i18n="download"
+          >
+            下载 PNG
+          </button>
+        </div>
+        <div id="status"></div>
+      </div>
+    </div>
+
+    <script>
+      // ---------- 多语言 ----------
+      const LANG = (navigator.language || "en").toLowerCase().startsWith("zh")
+        ? "zh"
+        : "en";
+      const I18N = {
+        zh: {
+          pageTitle: "封面生成器",
+          library: "书库",
+          selectBook: "选择书籍",
+          noBook: "（无书籍）",
+          title: "书名",
+          subtitle: "副标题",
+          topText: "顶部文字",
+          topTextPlaceholder: "一句话介绍这本书",
+          author: "作者",
+          titleAlign: "书名对齐",
+          alignCenter: "居中",
+          alignLeft: "左对齐",
+          alignRight: "右对齐",
+          subtitlePlacement: "副标题位置",
+          bottomRight: "下方 · 右",
+          bottomLeft: "下方 · 左",
+          topRight: "上方 · 右",
+          topLeft: "上方 · 左",
+          font: "字体",
+          logo: "LOGO",
+          colors: "配色",
+          customColor: "自定义颜色",
+          save: "保存到书籍",
+          download: "下载 PNG",
+          selectBookFirst: "请先选择要保存到的书籍",
+          saveOk: "✅ 封面已保存到书籍 ",
+          saveFail: "保存失败",
+          bookOption: "{title}（{author}）",
+          color_gray: "灰色",
+          color_red: "红色",
+          color_orange: "橙色",
+          color_yellow: "黄色",
+          color_lime: "黄绿",
+          color_green: "绿色",
+          color_teal: "青蓝",
+          color_cyan: "青色",
+          color_sky: "天蓝",
+          color_blue: "蓝色",
+          color_indigo: "靛蓝",
+          color_violet: "紫罗兰",
+          color_fuchsia: "紫红",
+          font_songti: "宋体（衬线）",
+          font_heiti: "黑体（无衬线）",
+          font_kaiti: "楷体",
+          font_fangsong: "仿宋",
+          font_georgia: "Georgia（西文）",
+          font_helvetica: "Helvetica（西文）",
+          font_system: "系统默认",
+        },
+        en: {
+          pageTitle: "Cover Generator",
+          library: "Library",
+          selectBook: "Select book",
+          noBook: "(No book)",
+          title: "Title",
+          subtitle: "Subtitle",
+          topText: "Top text",
+          topTextPlaceholder: "One-sentence introduction",
+          author: "Author",
+          titleAlign: "Title align",
+          alignCenter: "Center",
+          alignLeft: "Left",
+          alignRight: "Right",
+          subtitlePlacement: "Subtitle position",
+          bottomRight: "Bottom · Right",
+          bottomLeft: "Bottom · Left",
+          topRight: "Top · Right",
+          topLeft: "Top · Left",
+          font: "Font",
+          logo: "LOGO",
+          colors: "Colors",
+          customColor: "Custom color",
+          save: "Save to book",
+          download: "Download PNG",
+          selectBookFirst: "Please select a book first",
+          saveOk: "✅ Cover saved to book ",
+          saveFail: "Save failed",
+          bookOption: "{title} ({author})",
+          color_gray: "Gray",
+          color_red: "Red",
+          color_orange: "Orange",
+          color_yellow: "Yellow",
+          color_lime: "Lime",
+          color_green: "Green",
+          color_teal: "Teal",
+          color_cyan: "Cyan",
+          color_sky: "Sky",
+          color_blue: "Blue",
+          color_indigo: "Indigo",
+          color_violet: "Violet",
+          color_fuchsia: "Fuchsia",
+          font_songti: "Songti (serif)",
+          font_heiti: "Heiti (sans)",
+          font_kaiti: "Kaiti",
+          font_fangsong: "Fangsong",
+          font_georgia: "Georgia (Latin)",
+          font_helvetica: "Helvetica (Latin)",
+          font_system: "System default",
+        },
+      };
+      const t = (key) => I18N[LANG][key] || I18N.en[key] || key;
+      function applyI18n() {
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          el.textContent = t(el.dataset.i18n);
+        });
+        document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+          el.placeholder = t(el.dataset.i18nPlaceholder);
+        });
+      }
+
+      const COLORS = [
+        ["gray", "#6b7280"],
+        ["red", "#ff0000"],
+        ["orange", "#e66a21"],
+        ["yellow", "#f8b824"],
+        ["lime", "#8c9d1a"],
+        ["green", "#449429"],
+        ["teal", "#3a9e9f"],
+        ["cyan", "#06b6d4"],
+        ["sky", "#0ea5e9"],
+        ["blue", "#103fa4"],
+        ["indigo", "#6167b3"],
+        ["violet", "#480d71"],
+        ["fuchsia", "#b8459c"],
+      ];
+      const FONTS = [
+        ["songti", '"Songti SC", "STSong", "SimSun", serif'],
+        ["heiti", '"PingFang SC", "Heiti SC", "Microsoft YaHei", sans-serif'],
+        ["kaiti", '"Kaiti SC", "KaiTi", "STKaiti", serif'],
+        ["fangsong", '"FangSong", "STFangsong", serif'],
+        ["georgia", "Georgia, serif"],
+        ["helvetica", "Helvetica, Arial, sans-serif"],
+        ["system", "system-ui, -apple-system, sans-serif"],
+      ];
+      const canvas = document.getElementById("cover");
+      const ctx = canvas.getContext("2d");
+      const S = 2; // 500x800 逻辑尺寸，2 倍缩放输出
+
+      let color = COLORS[5][1]; // 默认 Green
+      let font = FONTS[0][1]; // 默认宋体
+
+      function initSwatches() {
+        const box = document.getElementById("colors");
+        COLORS.forEach(([key, hex], i) => {
+          const s = document.createElement("div");
+          s.className = "swatch" + (hex === color ? " active" : "");
+          s.title = t("color_" + key);
+          s.style.background = hex;
+          s.onclick = () => {
+            color = hex;
+            box
+              .querySelectorAll(".swatch")
+              .forEach((el) => el.classList.remove("active"));
+            s.classList.add("active");
+            render();
+          };
+          box.appendChild(s);
+        });
+
+        // 自定义颜色入口（放最后）
+        const custom = document.createElement("label");
+        custom.className = "swatch custom";
+        custom.title = t("customColor");
+        const input = document.createElement("input");
+        input.type = "color";
+        input.value = color;
+        custom.appendChild(input);
+        custom.addEventListener("click", (e) => {
+          if (e.target === custom) input.click();
+        });
+        input.addEventListener("input", () => {
+          color = input.value;
+          box
+            .querySelectorAll(".swatch")
+            .forEach((el) => el.classList.remove("active"));
+          custom.classList.add("active");
+          render();
+        });
+        box.appendChild(custom);
+      }
+
+      function initFonts() {
+        const sel = document.getElementById("font");
+        FONTS.forEach(([key, family]) => {
+          const opt = document.createElement("option");
+          opt.value = family;
+          opt.textContent = t("font_" + key);
+          sel.appendChild(opt);
+        });
+        sel.value = font;
+      }
+
+      function wrapText(text, maxWidth, font) {
+        ctx.font = font;
+        if (!text) return [""];
+        const words = text.split(/\s+/).filter(Boolean);
+        const lines = [];
+        if (words.length <= 1) {
+          let line = "";
+          for (const ch of text) {
+            const test = line + ch;
+            if (line && ctx.measureText(test).width > maxWidth) {
+              lines.push(line);
+              line = ch;
+            } else line = test;
+          }
+          if (line) lines.push(line);
+        } else {
+          let line = "";
+          for (const w of words) {
+            const test = line ? line + " " + w : w;
+            if (line && ctx.measureText(test).width > maxWidth) {
+              lines.push(line);
+              line = w;
+            } else line = test;
+          }
+          if (line) lines.push(line);
+        }
+        return lines;
+      }
+
+      // 书名自动适应字号
+      function fitTitle(text, maxWidth) {
+        let size = 76;
+        while (size > 30) {
+          const lines = wrapText(text, maxWidth, `400 ${size}px ${font}`);
+          if (lines.length <= 4) return { lines, size };
+          size -= 4;
+        }
+        const lines = wrapText(text, maxWidth, `400 30px ${font}`);
+        return { lines, size: 30 };
+      }
+
+      function render() {
+        const topText = document.getElementById("topText").value;
+        const title = document.getElementById("title").value;
+        const subtitle = document.getElementById("subtitle").value;
+        const author = document.getElementById("author").value;
+        const placement = document.getElementById("placement").value;
+        font = document.getElementById("font").value;
+
+        // 保存按钮颜色随选中配色同步
+        document.documentElement.style.setProperty("--accent", color);
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 顶部色条
+        ctx.fillStyle = color;
+        ctx.fillRect(20 * S, 0, 460 * S, 10 * S);
+
+        // 顶部文字（一句话介绍）
+        ctx.fillStyle = "#000";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.font = `400 ${20 * S}px ${font}`;
+        ctx.fillText(topText, 250 * S, 14 * S, 460 * S);
+
+        drawTextLayer();
+      }
+
+      function drawTextLayer() {
+        const logo = document.getElementById("logo").value;
+        const title = document.getElementById("title").value;
+        const subtitle = document.getElementById("subtitle").value;
+        const author = document.getElementById("author").value;
+        const placement = document.getElementById("placement").value;
+
+        // 书名块
+        const maxW = 420; // 460 - 2*20 边距
+        const { lines, size } = fitTitle(title, maxW);
+        const lineHeight = size * 1.1;
+        const pad = 25;
+        const blockH = lines.length * lineHeight + pad * 2;
+        const titleTop = Math.round((800 - blockH) / 2);
+
+        ctx.fillStyle = color;
+        ctx.fillRect(20 * S, titleTop * S, 460 * S, blockH * S);
+        ctx.fillStyle = "#fff";
+        ctx.textBaseline = "top";
+        ctx.font = `400 ${size * S}px ${font}`;
+
+        const titleAlign = document.getElementById("titleAlign").value;
+        let titleX;
+        if (titleAlign === "left") {
+          ctx.textAlign = "left";
+          titleX = 40 * S;
+        } else if (titleAlign === "right") {
+          ctx.textAlign = "right";
+          titleX = 460 * S;
+        } else {
+          ctx.textAlign = "center";
+          titleX = 250 * S;
+        }
+        lines.forEach((ln, i) => {
+          ctx.fillText(ln, titleX, (titleTop + pad + i * lineHeight) * S);
+        });
+
+        // 副标题
+        const subBelowY = titleTop + blockH + 8;
+        const subAboveY = titleTop - 34 - 8;
+        ctx.fillStyle = "#000";
+        ctx.font = `400 ${34 * S}px ${font}`;
+        if (placement === "top_left") {
+          ctx.textAlign = "left";
+          ctx.fillText(subtitle, 20 * S, subAboveY * S);
+        } else if (placement === "top_right") {
+          ctx.textAlign = "right";
+          ctx.fillText(subtitle, 480 * S, subAboveY * S);
+        } else if (placement === "bottom_left") {
+          ctx.textAlign = "left";
+          ctx.fillText(subtitle, 20 * S, subBelowY * S);
+        } else {
+          ctx.textAlign = "right";
+          ctx.fillText(subtitle, 480 * S, subBelowY * S);
+        }
+
+        // LOGO（左下角）
+        ctx.fillStyle = "#000";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "top";
+        ctx.font = `400 ${28 * S}px ${font}`;
+        ctx.fillText(logo, 20 * S, (800 - 20 - 28) * S);
+
+        // 作者（右下）
+        ctx.fillStyle = "#000";
+        ctx.textAlign = "right";
+        ctx.font = `400 ${24 * S}px ${font}`;
+        ctx.fillText(author, 480 * S, (800 - 20 - 24) * S);
+      }
+
+      // 加载书籍列表并自动填充
+      async function loadBooks() {
+        try {
+          const res = await fetch("/books.json");
+          const data = await res.json();
+          const sel = document.getElementById("book");
+          (data.books || []).forEach((b) => {
+            const opt = document.createElement("option");
+            opt.value = b.id;
+            opt.textContent = t("bookOption")
+              .replace("{title}", b.title)
+              .replace("{author}", b.author);
+            sel.appendChild(opt);
+          });
+          sel.onchange = () => {
+            const b = (data.books || []).find((x) => x.id === sel.value);
+            if (b) {
+              document.getElementById("title").value = b.title || "";
+              document.getElementById("author").value = b.author || "";
+              document.getElementById("subtitle").value =
+                b.category || b.dynasty || "";
+              render();
+            }
+          };
+        } catch (e) {
+          console.error("加载书籍失败", e);
+        }
+      }
+
+      function status(msg) {
+        document.getElementById("status").textContent = msg;
+      }
+
+      async function saveToBook() {
+        const bookId = document.getElementById("book").value;
+        if (!bookId) {
+          status(t("selectBookFirst"));
+          return;
+        }
+        const btn = document.getElementById("saveBtn");
+        btn.disabled = true;
+        try {
+          const dataUrl = canvas.toDataURL("image/png");
+          const res = await fetch("/cover/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ book: bookId, data: dataUrl }),
+          });
+          const result = await res.json();
+          status(
+            result.ok
+              ? t("saveOk") + bookId
+              : "❌ " + (result.error || t("saveFail")),
+          );
+        } catch (e) {
+          status("❌ " + t("saveFail") + ": " + e.message);
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      function downloadPng() {
+        const a = document.createElement("a");
+        a.download = "cover.png";
+        a.href = canvas.toDataURL("image/png");
+        a.click();
+      }
+
+      document.querySelectorAll("input[type=text], select").forEach((el) => {
+        if (el.id !== "book") {
+          el.addEventListener("input", render);
+        }
+      });
+
+      applyI18n();
+      initSwatches();
+      initFonts();
+      loadBooks();
+      render();
+
+      // 让按钮组宽度跟随画布宽度
+      function fitActions() {
+        const actions = document.querySelector(".actions");
+        const w = canvas.getBoundingClientRect().width;
+        if (w > 0) actions.style.width = w + "px";
+      }
+      window.addEventListener("resize", fitActions);
+      fitActions();
+    </script>
+  </body>
+</html>

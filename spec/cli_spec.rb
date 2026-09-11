@@ -30,6 +30,32 @@ class CliSpec < Minitest::Test
     end
   end
 
+  def test_commands_require_initialized_project
+    commands = [
+      ["new", "book", "test"],
+      ["new", "chapter", "demo", "1"],
+      ["new", "volume", "demo", "vol"],
+      ["rename", "chapters", "demo"],
+      ["build"],
+      ["build", "--all"],
+      ["clean"],
+      ["validate"],
+      ["status"],
+      ["serve"],
+      ["cover"],
+    ]
+
+    Dir.mktmpdir("bindery-spec") do |tmp|
+      Dir.chdir(tmp) do
+        commands.each do |argv|
+          assert_raises(SystemExit, "预期 `bindery #{argv.join(' ')}` 在未初始化的目录下报错退出") do
+            capture_io { Bindery::CLI.start(argv) }
+          end
+        end
+      end
+    end
+  end
+
   def test_build_all_with_empty_books_still_rebuilds_index
     Dir.mktmpdir("bindery-spec") do |tmp|
       FileUtils.mkdir_p(File.join(tmp, "config"))
@@ -199,20 +225,17 @@ class CliSpec < Minitest::Test
     end
   end
 
-  def test_cover_generates_png
+  def test_new_book_with_cover_option_generates_png
     Dir.mktmpdir("bindery-spec") do |tmp|
       FileUtils.mkdir_p(File.join(tmp, "config"))
       File.write(File.join(tmp, "config", "bindery.yml"), "project_name: \"spec\"\n")
-      books = File.join(tmp, "books")
-      FileUtils.mkdir_p(File.join(books, "demo", "chapters"))
-      File.write(File.join(books, "demo", "metadata.yaml"), "title: demo\n")
-      File.write(File.join(books, "demo", "chapters", "01.md"), "# 一\n")
+      FileUtils.mkdir_p(File.join(tmp, "books"))
 
       Dir.chdir(tmp) do
-        capture_io { Bindery::CLI.start(["cover", "demo"]) }
+        capture_io { Bindery::CLI.start(["new", "book", "demo", "--cover"]) }
       end
 
-      assert File.file?(File.join(books, "demo", "cover.png"))
+      assert File.file?(File.join(tmp, "books", "demo", "cover.png"))
     end
   end
 end

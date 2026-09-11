@@ -4,7 +4,7 @@ require "rbconfig"
 
 module Bindery
   # 命令行入口：解析子命令并分发
-  # 支持: init / new book / build / clean / validate / watch / serve / status / version / help
+  # 支持: init / new book / build / clean / validate / watch / serve / cover / status / version / help
   class CLI
     def self.start(argv)
       new.run(argv)
@@ -23,16 +23,14 @@ module Bindery
         cmd_clean(rest)
       when "validate"
         cmd_validate(rest)
-      when "cover"
-        cmd_cover(rest)
       when "rename"
         cmd_rename(rest)
       when "watch"
         cmd_watch(rest)
       when "serve"
         cmd_serve(rest)
-      when "web"
-        cmd_web(rest)
+      when "cover"
+        cmd_cover(rest)
       when "status"
         cmd_status(rest)
       when "version", "-v", "--version"
@@ -107,19 +105,6 @@ module Bindery
         exit 1
       end
       Generators::VolumeGenerator.call(book_id, volume_name, chapters: options[:chapters])
-    end
-
-    # ---------- bindery cover <book-id> ----------
-    def cmd_cover(args)
-      id = args.first
-      if id.nil?
-        warn "用法: bindery cover <book-id>"
-        exit 1
-      end
-      project_root = Project.root!
-      book = Bindery::Book.find(id, project_root)
-      path = Bindery::Cover.generate(book)
-      puts "已生成封面: #{path}"
     end
 
     # ---------- bindery rename chapters <book-id> ----------
@@ -351,7 +336,7 @@ module Bindery
 
     # ---------- bindery serve [--port N] [--host H] ----------
     def cmd_serve(args)
-      options = { port: 8000, host: "127.0.0.1" }
+      options = { port: nil, host: "127.0.0.1" }
       parser = OptionParser.new do |o|
         o.on("--port N", Integer) { |v| options[:port] = v }
         o.on("--host H") { |v| options[:host] = v }
@@ -363,9 +348,9 @@ module Bindery
       Bindery::Server.new(project_root, host: options[:host], port: options[:port]).start
     end
 
-    # ---------- bindery web [--port N] [--host H] ----------
-    def cmd_web(args)
-      options = { port: 8000, host: "127.0.0.1" }
+    # ---------- bindery cover [--port N] [--host H] ----------
+    def cmd_cover(args)
+      options = { port: nil, host: "127.0.0.1" }
       parser = OptionParser.new do |o|
         o.on("--port N", Integer) { |v| options[:port] = v }
         o.on("--host H") { |v| options[:host] = v }
@@ -375,8 +360,9 @@ module Bindery
       project_root = Project.root!
       Index.rebuild(project_root)
 
-      url = "http://#{options[:host]}:#{options[:port]}/cover"
       server = Bindery::Server.new(project_root, host: options[:host], port: options[:port])
+      server.listen # 先绑定端口（未指定 --port 时由系统自动分配），再拿到实际端口拼 URL
+      url = "http://#{options[:host]}:#{server.port}/cover"
       thread = Thread.new do
         begin
           server.start
@@ -384,7 +370,6 @@ module Bindery
           warn "服务启动失败: #{e.message}"
         end
       end
-      sleep 0.5 # 等服务就绪
       open_browser(url)
       puts "封面生成器已打开: #{url}（Ctrl-C 退出）"
       thread.join
@@ -439,7 +424,6 @@ module Bindery
                   --translator 译者  --isbn ISBN  --cover 自动生成封面
           bindery new chapter <book-id> <数量>               批量创建章节（编号自动接续）
           bindery new volume <book-id> <卷名> [--chapters N] 新建卷（平铺 md，h2=卷名/h3=章名）
-          bindery cover <book-id>                           自动生成装饰性封面
           bindery rename chapters <book-id>                 按标题自动更新章节文件名
           bindery build <id>                                构建单本书的 epub
           bindery build --all                               批量构建所有书
@@ -451,8 +435,8 @@ module Bindery
           bindery validate --all                            校验所有书
           bindery clean [--all]                             清理构建产物（--all 连 books.json 一起删）
           bindery watch [--interval 秒]                      监听 books/ 自动重建
-          bindery serve [--port N] [--host H]                启动本地书库站点
-          bindery web [--port N]                             打开 Web 封面生成器
+          bindery serve [--port N] [--host H]                启动本地书库站点（不加 --port 时自动选空闲端口）
+          bindery cover [--port N] [--host H]                打开 Web 封面生成器（不加 --port 时自动选空闲端口）
           bindery status                                     查看所有书籍状态
           bindery version                                    查看版本号
       HELP

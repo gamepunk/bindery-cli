@@ -20,20 +20,33 @@ module Bindery
       ".svg"  => "image/svg+xml",
     }.freeze
 
-    # 封面编辑器页面（随 gem 一起打包）
+    # 书库与封面编辑器页面（随 gem 一起打包）
     ASSETS_DIR = Pathname.new(__dir__) + "assets"
 
-    def initialize(project_root, host: "127.0.0.1", port: 8000)
+    attr_reader :port
+
+    # port 为 nil 时不预先指定端口，由操作系统自动分配一个空闲端口
+    def initialize(project_root, host: "127.0.0.1", port: nil)
       @project_root = project_root
       @host = host
       @port = port
     end
 
+    # 绑定监听地址，并返回实际监听的端口号（未指定 --port 时可用于提前拿到自动分配的端口）
+    def listen
+      return @port if @server
+
+      @server = TCPServer.new(@host, @port || 0)
+      @port = @server.addr[1]
+    rescue Errno::EADDRINUSE
+      raise Bindery::Error, "端口 #{@port} 已被占用，换个端口试试（--port N），或不指定 --port 让系统自动分配"
+    end
+
     def start
-      server = TCPServer.new(@host, @port)
+      listen
       puts "服务已启动: http://#{@host}:#{@port} （Ctrl-C 退出）"
       loop do
-        client = server.accept
+        client = @server.accept
         begin
           respond(client)
         rescue StandardError => e
@@ -50,7 +63,7 @@ module Bindery
       puts "\n服务已停止"
     ensure
       begin
-        server.close
+        @server&.close
       rescue StandardError
         nil
       end
@@ -72,7 +85,7 @@ module Bindery
         end
       end
 
-      path = (URI::DEFAULT_PARSER.unescape(raw_path.split("?").first) rescue raw_path)
+      path = (URI::RFC2396_PARSER.unescape(raw_path.split("?").first) rescue raw_path)
       path = "/" if path.nil? || path.empty?
       path = path.gsub("..", "") # 防目录穿越
 
@@ -84,12 +97,11 @@ module Bindery
 
       case path
       when "/", "/index.html"
-        body = index_html
-        send_response(client, 200, MIME[".html"], body, method)
+        serve_file(client, ASSETS_DIR + "index.html", MIME[".html"], method)
       when "/books.json"
         serve_file(client, Project.index_file(@project_root), MIME[".json"], method)
       when "/cover"
-        serve_file(client, ASSETS_DIR + "index.html", MIME[".html"], method)
+        serve_file(client, ASSETS_DIR + "cover.html", MIME[".html"], method)
       when %r{\A/epub/([\w\-.]+\.epub)\z}
         serve_file(client, Project.output_dir(@project_root) + "epub" + Regexp.last_match(1), MIME[".epub"], method)
       when %r{\A/cover/([\w\-]+)\z}
@@ -97,56 +109,6 @@ module Bindery
       else
         not_found(client, method)
       end
-    end
-
-    def index_html
-      index_file = Project.index_file(@project_root)
-      data = if index_file.file?
-               JSON.parse(index_file.read)
-             else
-               Bindery::Index.rebuild(@project_root)
-             end
-      books = data["books"] || []
-
-      rows = books.map do |b|
-        id = escape_html(b["id"].to_s)
-        title = escape_html(b["title"].to_s)
-        author = escape_html(b["author"].to_s)
-        epub_link = if b["epub"]
-                      %(<a href="/epub/#{id}.epub" download>下载 EPUB</a>)
-                    else
-                      "<em>未构建</em>"
-                    end
-        cover = %(<img src="/cover/#{id}" class="cover" alt="">)
-        "<li class=\"book\">#{cover}<div class=\"info\"><h2>#{title}</h2><p class=\"author\">#{author}</p>#{epub_link}</div></li>"
-      end.join("\n")
-
-      <<~HTML
-        <!doctype html>
-        <html lang="zh-CN">
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1">
-          <title>#{escape_html(@project_root.basename.to_s)} · 书库</title>
-          <style>
-            body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 2em auto; padding: 0 1em; color: #222; }
-            h1 { font-size: 1.6em; border-bottom: 1px solid #eee; padding-bottom: .4em; }
-            ul { list-style: none; padding: 0; }
-            .book { display: flex; gap: 1em; padding: 1em 0; border-bottom: 1px solid #f0f0f0; }
-            .cover { width: 64px; height: 102px; object-fit: cover; background: #f5f5f5; border-radius: 4px; }
-            .info h2 { margin: 0; font-size: 1.1em; }
-            .author { color: #666; margin: .3em 0 .5em; }
-            a { color: #b45309; }
-            em { color: #999; }
-          </style>
-        </head>
-        <body>
-          <h1>#{escape_html(@project_root.basename.to_s)} · 书库</h1>
-          <p>共 #{books.size} 本书</p>
-          <ul>#{rows}</ul>
-        </body>
-        </html>
-      HTML
     end
 
     def serve_cover(client, id, method)
@@ -229,10 +191,6 @@ module Bindery
                 "Connection: close\r\n\r\n"
       client.write(headers)
       client.write(body) unless method == "HEAD"
-    end
-
-    def escape_html(str)
-      str.gsub("&", "&amp;").gsub("<", "&lt;").gsub(">", "&gt;").gsub('"', "&quot;")
     end
   end
 end
