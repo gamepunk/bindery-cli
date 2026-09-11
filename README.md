@@ -40,12 +40,13 @@ bindery init
 #    （N = 正文章节数，封面/目录由构建自动生成）
 bindery new book "论语" --author "孔子及弟子" --dynasty "先秦" --translator "译者甲" --isbn "9781234567890" --cover
 
-# 4. （可选）卷式结构：每个卷在 EPUB 中独立成页（h2=卷名，h3=章名）
+# 4. （可选）卷式结构：卷由标题层级定义（h2=卷名，h3=章名），每卷在 EPUB 中独立成页
 bindery new volume <id> "学而" --chapters 5
 bindery new volume <id> "为政" --chapters 5
 
 # 5. 编辑 books/<id>/chapters/ 下的章节文件
 #    （可选）单独批量创建章节：bindery new chapter <id> 10
+#    （可选）按标题自动重命名章节：bindery rename chapters <id>
 #    （可选）单独生成封面：bindery cover <id>
 
 # 6. 构建 EPUB
@@ -80,13 +81,10 @@ my-books/
 │   └── <id>/
 │       ├── metadata.yaml  # 书籍元信息
 │       ├── cover.png      # 封面（可选，bindery cover 自动生成）
-│       └── chapters/      # 平铺章节，或卷目录（每卷独立成页）
+│       └── chapters/      # 平铺 Markdown，卷结构由标题层级定义（## 卷名 / ### 章名）
 │           ├── 01-chapter.md
-│           ├── 01-学而/
-│           │   ├── 01.md
-│           │   └── 02.md
-│           └── 02-为政/
-│               └── 01.md
+│           ├── 卷01-学而.md
+│           └── 卷02-为政.md
 ├── templates/style.css    # 全项目共用的 EPUB 样式
 ├── output/epub/           # 构建产物
 └── books.json             # 自动生成的书目索引

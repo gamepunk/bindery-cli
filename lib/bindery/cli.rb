@@ -24,6 +24,8 @@ module Bindery
         cmd_validate(rest)
       when "cover"
         cmd_cover(rest)
+      when "rename"
+        cmd_rename(rest)
       when "watch"
         cmd_watch(rest)
       when "serve"
@@ -117,6 +119,19 @@ module Bindery
       puts "已生成封面: #{path}"
     end
 
+    # ---------- bindery rename chapters <book-id> ----------
+    def cmd_rename(args)
+      type, book_id = args
+      if type != "chapters" || book_id.nil?
+        warn "用法: bindery rename chapters <book-id>"
+        exit 1
+      end
+      project_root = Project.root!
+      book = Bindery::Book.find(book_id, project_root)
+      count = Bindery::Renamer.rename_chapters(book)
+      puts "重命名完成：更新 #{count} 个文件"
+    end
+
     def cmd_new_book(args)
       options = { author: "佚名", dynasty: "", category: "", translator: "", isbn: "", id: nil, cover: false }
       parser = OptionParser.new do |o|
@@ -193,7 +208,7 @@ module Bindery
 
       if options[:dry_run]
         books.each do |book|
-          puts "[#{book.id}] 将构建 → #{book.epub_output(project_root)}（#{book.all_chapters.size} 个章节）"
+          puts "[#{book.id}] 将构建 → #{book.epub_output(project_root)}（#{book.chapters.size} 个章节）"
         end
         return
       end
@@ -359,7 +374,7 @@ module Bindery
       books.each do |book|
         printf(
           "%-16s %-16s %-6d %-4s %-6s %-16s\n",
-          book.id, book.title, book.all_chapters.size,
+          book.id, book.title, book.chapters.size,
           book.cover? ? "✅" : "—",
           book.built?(project_root) ? "✅" : "—",
           book.built_at(project_root)&.strftime("%m-%d %H:%M") || "—"
@@ -380,8 +395,9 @@ module Bindery
             选项: --id ID（可选） --author NAME  --dynasty 朝代  --category 分类
                   --translator 译者  --isbn ISBN  --cover 自动生成封面
           bindery new chapter <book-id> <数量>               批量创建章节（编号自动接续）
-          bindery new volume <book-id> <卷名> [--chapters N] 新建卷（每卷在 EPUB 中独立成页）
+          bindery new volume <book-id> <卷名> [--chapters N] 新建卷（平铺 md，h2=卷名/h3=章名）
           bindery cover <book-id>                           自动生成装饰性封面
+          bindery rename chapters <book-id>                 按标题自动更新章节文件名
           bindery build <id>                                构建单本书的 epub
           bindery build --all                               批量构建所有书
           bindery build <id> --check                        构建前校验（不实际构建）

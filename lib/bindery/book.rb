@@ -57,38 +57,15 @@ module Bindery
       dir + "chapters"
     end
 
-    # 平铺的章节文件（直接在 chapters/ 下，卷式书里通常为空）
+    # 平铺的章节文件（直接在 chapters/ 下，按文件名排序）
     def chapters
       return [] unless chapters_dir.directory?
 
       chapters_dir.children.select { |f| f.file? && f.extname == ".md" }.sort
     end
 
-    # 卷目录（chapters/ 下的子目录，按文件名排序）
-    def volumes
-      return [] unless chapters_dir.directory?
-
-      chapters_dir.children.select(&:directory?).sort
-    end
-
-    def has_volumes?
-      !volumes.empty?
-    end
-
-    # 某个卷目录下的章节文件
-    def volume_chapters(vol_dir)
-      return [] unless vol_dir.directory?
-
-      vol_dir.children.select { |f| f.file? && f.extname == ".md" }.sort
-    end
-
-    # 所有章节（平铺 + 各卷内），供统计 / 校验使用
-    def all_chapters
-      (chapters + volumes.flat_map { |v| volume_chapters(v) }).sort_by(&:to_s)
-    end
-
     def valid?
-      metadata_file.file? && all_chapters.any?
+      metadata_file.file? && chapters.any?
     end
 
     def epub_output(project_root = Project.root!)

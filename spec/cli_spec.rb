@@ -130,16 +130,16 @@ class CliSpec < Minitest::Test
       books = File.join(tmp, "books")
       FileUtils.mkdir_p(File.join(books, "demo", "chapters"))
       File.write(File.join(books, "demo", "metadata.yaml"), "title: demo\n")
-      File.write(File.join(books, "demo", "chapters", "01-chapter.md"), "# 第一章\n")
+      File.write(File.join(books, "demo", "chapters", "chapter-0001.md"), "### 第一章\n")
 
       Dir.chdir(tmp) do
         capture_io { Bindery::CLI.start(["new", "chapter", "demo", "3"]) }
       end
 
       dir = File.join(books, "demo", "chapters")
-      assert File.file?(File.join(dir, "02-chapter.md"))
-      assert File.file?(File.join(dir, "03-chapter.md"))
-      assert File.file?(File.join(dir, "04-chapter.md"))
+      assert File.file?(File.join(dir, "chapter-0002.md"))
+      assert File.file?(File.join(dir, "chapter-0003.md"))
+      assert File.file?(File.join(dir, "chapter-0004.md"))
     end
   end
 
@@ -154,14 +154,14 @@ class CliSpec < Minitest::Test
       end
 
       dir = File.join(tmp, "books", "1984", "chapters")
-      assert File.file?(File.join(dir, "01-chapter.md"))
-      assert File.file?(File.join(dir, "02-chapter.md"))
-      assert File.file?(File.join(dir, "03-chapter.md"))
-      refute File.exist?(File.join(dir, "04-chapter.md"))
+      assert File.file?(File.join(dir, "chapter-0001.md"))
+      assert File.file?(File.join(dir, "chapter-0002.md"))
+      assert File.file?(File.join(dir, "chapter-0003.md"))
+      refute File.exist?(File.join(dir, "chapter-0004.md"))
     end
   end
 
-  def test_new_volume_creates_directory_with_chapters
+  def test_new_volume_creates_flat_file_with_headings
     Dir.mktmpdir("bindery-spec") do |tmp|
       FileUtils.mkdir_p(File.join(tmp, "config"))
       File.write(File.join(tmp, "config", "bindery.yml"), "project_name: \"spec\"\n")
@@ -173,10 +173,29 @@ class CliSpec < Minitest::Test
         capture_io { Bindery::CLI.start(["new", "volume", "demo", "学而", "--chapters", "2"]) }
       end
 
-      vol = File.join(books, "demo", "chapters", "01-学而")
-      assert File.directory?(vol)
-      assert File.file?(File.join(vol, "01.md"))
-      assert File.file?(File.join(vol, "02.md"))
+      file = File.join(books, "demo", "chapters", "卷01-学而.md")
+      assert File.file?(file)
+      content = File.read(file)
+      assert_includes content, "## 学而"
+      assert_includes content, "### 第1章"
+      assert_includes content, "### 第2章"
+    end
+  end
+
+  def test_rename_chapters_uses_heading_titles
+    Dir.mktmpdir("bindery-spec") do |tmp|
+      FileUtils.mkdir_p(File.join(tmp, "config"))
+      File.write(File.join(tmp, "config", "bindery.yml"), "project_name: \"spec\"\n")
+      books = File.join(tmp, "books")
+      FileUtils.mkdir_p(File.join(books, "demo", "chapters"))
+      File.write(File.join(books, "demo", "metadata.yaml"), "title: demo\n")
+      File.write(File.join(books, "demo", "chapters", "chapter-0001.md"), "### 学而时习之\n\n正文\n")
+
+      Dir.chdir(tmp) do
+        capture_io { Bindery::CLI.start(["rename", "chapters", "demo"]) }
+      end
+
+      assert File.file?(File.join(books, "demo", "chapters", "chapter-0001-学而时习之.md"))
     end
   end
 

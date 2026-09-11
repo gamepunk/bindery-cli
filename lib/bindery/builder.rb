@@ -17,12 +17,8 @@ module Bindery
 
     # 返回 true/false 表示是否成功；详细错误信息可通过 #last_error 获取
     def build_epub
-      if @book.has_volumes?
-        if @book.all_chapters.empty?
-          @last_error = "#{@book.id} 的卷目录下没有任何 .md 文件"
-          return false
-        end
-      elsif @book.chapters.empty?
+      chapters = @book.chapters
+      if chapters.empty?
         @last_error = "#{@book.id} 的 chapters/ 目录下没有任何 .md 文件"
         return false
       end
@@ -31,23 +27,17 @@ module Bindery
       ensure_pandoc!
 
       Dir.mktmpdir("bindery-#{@book.id}-") do |tmp|
-        if @book.has_volumes?
-          merged = merge_volumes(tmp)
-          split_level = 2
-        else
-          merged = merge_chapters(@book.chapters, tmp)
-          split_level = nil
-        end
-
+        merged = merge_chapters(chapters, tmp)
         meta_file = write_pandoc_metadata(tmp, meta)
 
         out_dir = Project.output_dir(@project_root) + "epub"
         FileUtils.mkdir_p(out_dir)
         out_path = out_dir + "#{@book.id}.epub"
 
+        # 按内容中最顶层的标题级别拆分：h1=书名 / h2=卷 / h3=章
+        split_level = top_heading_level(merged)
         cmd = ["pandoc", merged.to_s, "-o", out_path.to_s,
-               "--metadata-file", meta_file.to_s, "--toc"]
-        cmd += ["--split-level", split_level.to_s] if split_level
+               "--metadata-file", meta_file.to_s, "--toc", "--split-level", split_level.to_s]
 
         css = Project.templates_dir(@project_root) + "style.css"
         cmd += ["--css", css.to_s] if css.file?
@@ -96,39 +86,16 @@ module Bindery
       path
     end
 
-    # 卷式书：每卷生成一个 ## 卷名（h2）页，卷内章节标题降级为 h3
-    def merge_volumes(tmp_dir)
-      path = Pathname.new(tmp_dir) + "merged.md"
-      path.open("w") do |out|
-        @book.volumes.each_with_index do |vol_dir, i|
-          out.puts if i.positive?
-          name = vol_dir.basename.to_s.sub(/\A\d+-/, "")
-          out.puts "## #{name}"
-          out.puts
-          @book.volume_chapters(vol_dir).each do |chapter|
-            out.puts demote_headings(chapter.read, 2)
-            out.puts
-          end
-        end
-      end
-      path
-    end
+    # 返回合并后内容中最顶层的标题级别（1..6），无标题时返回 1
+    def top_heading_level(merged)
+      level = nil
+      merged.each_line do |line|
+        next unless line =~ /^(\#{1,6})\s/
 
-    # 把 ATX 标题降级指定级数（跳过代码围栏内部）
-    def demote_headings(text, levels)
-      in_fence = false
-      text.lines.map do |line|
-        if line =~ /^\s*(`{3,}|~{3,})/
-          in_fence = !in_fence
-          line
-        elsif in_fence
-          line
-        elsif line =~ /^(\#{1,6})(\s|$)/
-          ("#" * levels) + line
-        else
-          line
-        end
-      end.join
+        l = Regexp.last_match(1).length
+        level = l if level.nil? || l < level
+      end
+      level || 1
     end
 
     def write_pandoc_metadata(tmp_dir, meta)

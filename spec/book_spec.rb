@@ -45,21 +45,4 @@ class BookSpec < Minitest::Test
       assert_equal "佚名", book.author
     end
   end
-
-  def test_volumes_and_all_chapters
-    with_project do |root|
-      dir = root + "books/demo"
-      FileUtils.mkdir_p(dir + "chapters/01-学而")
-      FileUtils.mkdir_p(dir + "chapters/02-为政")
-      File.write(dir + "metadata.yaml", "title: demo\n")
-      File.write(dir + "chapters/01-学而/01.md", "# 一\n")
-      File.write(dir + "chapters/01-学而/02.md", "# 二\n")
-      File.write(dir + "chapters/02-为政/01.md", "# 三\n")
-
-      book = Bindery::Book.find("demo", root)
-      assert_equal 2, book.volumes.size
-      assert_equal 3, book.all_chapters.size
-      assert book.valid?
-    end
-  end
 end

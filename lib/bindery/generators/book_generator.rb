@@ -38,7 +38,7 @@ module Bindery
           translator: translator, isbn: isbn,
           lang: lang, publisher: publisher, rights: rights,
         })
-        template("book", "chapters/01-chapter.md", locals: { title: title })
+        template("book", "chapters/chapter-0001.md", locals: { title: title })
       end
     end
   end

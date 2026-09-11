@@ -20,7 +20,7 @@ module Bindery
         issues << "缺少 metadata.yaml"
       end
 
-      issues << "chapters/ 目录下没有任何 .md 文件" if book.all_chapters.empty?
+      issues << "chapters/ 目录下没有任何 .md 文件" if book.chapters.empty?
       issues << "未安装 pandoc（构建前请先安装）" unless pandoc_installed?
 
       issues
