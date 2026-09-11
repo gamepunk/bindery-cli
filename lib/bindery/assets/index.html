@@ -62,15 +62,14 @@
       }
 
       .controls {
-        flex: 3 1 0;
+        flex: 1 1 0;
         min-width: 0;
         overflow-y: auto;
         padding-right: 28px;
-        border-right: 1px solid var(--rule);
       }
 
       .preview {
-        flex: 2 1 0;
+        flex: 1 1 0;
         min-width: 0;
         display: flex;
         flex-direction: column;
@@ -227,17 +226,21 @@
 
       canvas {
         max-width: 100%;
-        max-height: 100%;
+        max-height: calc(100% - 90px);
         width: auto;
         height: auto;
         display: block;
-        border-radius: 2px;
+        border-radius: 3px;
         border: 1px solid var(--rule);
       }
 
       .actions {
         display: flex;
         gap: 10px;
+      }
+
+      .actions button {
+        flex: 1;
       }
 
       button {
@@ -682,6 +685,15 @@
       initFonts();
       loadBooks();
       render();
+
+      // 让按钮组宽度跟随画布宽度
+      function fitActions() {
+        const actions = document.querySelector(".actions");
+        const w = canvas.getBoundingClientRect().width;
+        if (w > 0) actions.style.width = w + "px";
+      }
+      window.addEventListener("resize", fitActions);
+      fitActions();
     </script>
   </body>
 </html>
